@@ -50,6 +50,7 @@ function SearchContent() {
   const [results, setResults] = useState<ReturnType<typeof toSkill>[]>([]);
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [filterOpen, setFilterOpen] = useState(false);
   const isInitial = useRef(true);
 
   const debouncedQuery = useDebounce(query, 300);
@@ -114,41 +115,67 @@ function SearchContent() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-8">
         <div className="relative flex-1">
+          <label htmlFor="search-input" className="sr-only">Search skills</label>
           <input
+            id="search-input"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by name, keyword, description..."
-            className="w-full rounded-lg bg-gray-900 border border-gray-700 px-4 py-2.5 pl-10 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="w-full rounded-lg bg-gray-900 border border-gray-700 px-4 py-3 pl-10 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
           />
-          <svg className="absolute left-3 top-3 h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="absolute left-3 top-3.5 h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
 
-        <select
-          value={category}
-          onChange={(e) => updateFilter(e.target.value, sort)}
-          className="rounded-lg bg-gray-900 border border-gray-700 px-4 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none appearance-none cursor-pointer min-w-[160px]"
+        {/* Mobile filter toggle */}
+        <button
+          onClick={() => setFilterOpen(!filterOpen)}
+          className="sm:hidden flex items-center justify-center gap-2 rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-sm text-gray-300"
+          aria-expanded={filterOpen}
+          aria-label="Toggle filters"
         >
-          <option value="">All Categories</option>
-          {CATEGORIES.map((c) => (
-            <option key={c.value} value={c.value}>
-              {c.icon} {c.label} ({categoryCounts[c.value] ?? 0})
-            </option>
-          ))}
-        </select>
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+          </svg>
+          Filters {(category || sort !== "relevance") && <span className="w-2 h-2 rounded-full bg-emerald-400" />}
+        </button>
 
-        <select
-          value={sort}
-          onChange={(e) => updateFilter(category, e.target.value)}
-          className="rounded-lg bg-gray-900 border border-gray-700 px-4 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none appearance-none cursor-pointer min-w-[140px]"
-        >
-          <option value="relevance">Relevance</option>
-          <option value="downloads">Most Downloads</option>
-          <option value="rating">Highest Rated</option>
-          <option value="newest">Newest</option>
-          <option value="updated">Recently Updated</option>
-        </select>
+        {/* Desktop filters (always visible) + Mobile drawer */}
+        <div className={`${filterOpen ? "flex" : "hidden"} sm:flex flex-col sm:flex-row gap-3`}>
+          <div>
+            <label htmlFor="category-filter" className="sr-only">Category</label>
+            <select
+              id="category-filter"
+              value={category}
+              onChange={(e) => updateFilter(e.target.value, sort)}
+              className="w-full sm:w-auto rounded-lg bg-gray-900 border border-gray-700 px-4 py-3 text-sm text-white focus:border-emerald-500 focus:outline-none appearance-none cursor-pointer sm:min-w-[160px]"
+            >
+              <option value="">All Categories</option>
+              {CATEGORIES.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.icon} {c.label} ({categoryCounts[c.value] ?? 0})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="sort-filter" className="sr-only">Sort by</label>
+            <select
+              id="sort-filter"
+              value={sort}
+              onChange={(e) => updateFilter(category, e.target.value)}
+              className="w-full sm:w-auto rounded-lg bg-gray-900 border border-gray-700 px-4 py-3 text-sm text-white focus:border-emerald-500 focus:outline-none appearance-none cursor-pointer sm:min-w-[140px]"
+            >
+              <option value="relevance">Relevance</option>
+              <option value="downloads">Most Downloads</option>
+              <option value="rating">Highest Rated</option>
+              <option value="newest">Newest</option>
+              <option value="updated">Recently Updated</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Results count */}

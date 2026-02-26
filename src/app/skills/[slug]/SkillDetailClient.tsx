@@ -1,13 +1,18 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import dynamic from "next/dynamic";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import PlatformBadge from "@/components/PlatformBadge";
 import PriceBadge from "@/components/PriceBadge";
 import InstallInstructions from "@/components/InstallInstructions";
-import ReviewSection from "@/components/ReviewSection";
 import CopyButton from "@/components/CopyButton";
+
+const ReviewSection = dynamic(() => import("@/components/ReviewSection"), {
+  loading: () => <div className="text-gray-500 py-4">Loading reviews...</div>,
+});
 import { Skill } from "@/lib/types";
 
 const OS_LABELS: Record<string, string> = { darwin: "macOS", linux: "Linux", win32: "Windows" };
@@ -134,7 +139,7 @@ export default function SkillDetailClient({ slug }: { slug: string }) {
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
               <span className="flex items-center gap-2">
                 {skill.authorImage && (
-                  <img src={skill.authorImage} alt="" className="w-5 h-5 rounded-full" />
+                  <Image src={skill.authorImage} alt="" width={20} height={20} className="w-5 h-5 rounded-full" />
                 )}
                 by <span className="text-gray-300">{skill.author.name}</span>
               </span>
@@ -226,7 +231,7 @@ export default function SkillDetailClient({ slug }: { slug: string }) {
             <h3 className="font-semibold">Author</h3>
             <div className="flex items-center gap-3">
               {skill.authorImage ? (
-                <img src={skill.authorImage} alt={skill.author.name} className="w-10 h-10 rounded-full" />
+                <Image src={skill.authorImage} alt={skill.author.name} width={40} height={40} className="w-10 h-10 rounded-full" />
               ) : (
                 <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 text-lg font-bold">
                   {(skill.author.name ?? "?")[0].toUpperCase()}

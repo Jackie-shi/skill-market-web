@@ -30,5 +30,8 @@ export async function GET(
     where: { authorId: skill.authorId, status: "approved" },
   });
 
-  return NextResponse.json({ skill, relatedSkills, authorSkillCount });
+  return NextResponse.json(
+    { skill, relatedSkills, authorSkillCount },
+    { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300" } }
+  );
 }
