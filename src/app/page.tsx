@@ -141,9 +141,11 @@ export default function Home() {
             Discover, share &amp; trade skills for Claude Code, OpenClaw, Cursor and beyond.
             Extend your AI tools in seconds.
           </p>
-          <form onSubmit={handleSearch} className="max-w-lg mx-auto">
+          <form onSubmit={handleSearch} className="max-w-lg mx-auto" role="search">
             <div className="relative">
+              <label htmlFor="hero-search" className="sr-only">Search for skills</label>
               <input
+                id="hero-search"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Search for skills (e.g. testing, kubernetes, git...)"

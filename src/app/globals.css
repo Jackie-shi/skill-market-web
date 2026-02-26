@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Reduce CLS from font loading */
+html { color-scheme: dark; }
+
+/* Smooth touch scrolling on mobile */
+@media (pointer: coarse) {
+  * { -webkit-tap-highlight-color: transparent; }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
