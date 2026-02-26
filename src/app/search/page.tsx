@@ -1,9 +1,12 @@
 "use client";
+import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense, useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import { CATEGORIES } from "@/lib/categories";
 import { SkillCategory } from "@/lib/types";
 import SkillCard from "@/components/SkillCard";
+import SkillCardSkeleton from "@/components/SkillCardSkeleton";
+import { useDebounce } from "@/hooks/useDebounce";
 
 function toSkill(s: any) {
   return {
@@ -32,6 +35,8 @@ function toSkill(s: any) {
   };
 }
 
+const SUGGESTIONS = ["git", "testing", "kubernetes", "react", "docker", "productivity"];
+
 function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -45,6 +50,9 @@ function SearchContent() {
   const [results, setResults] = useState<ReturnType<typeof toSkill>[]>([]);
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const isInitial = useRef(true);
+
+  const debouncedQuery = useDebounce(query, 300);
 
   const fetchSkills = useCallback((q: string, cat: string, s: string) => {
     const params = new URLSearchParams();
@@ -63,18 +71,41 @@ function SearchContent() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Initial fetch
   useEffect(() => {
     fetchSkills(initialQ, initialCat ?? "", initialSort);
+    isInitial.current = false;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const updateURL = (q: string, cat: string, s: string) => {
+  // Debounced search on query change
+  useEffect(() => {
+    if (isInitial.current) return;
     const params = new URLSearchParams();
-    if (q) params.set("q", q);
+    if (debouncedQuery) params.set("q", debouncedQuery);
+    if (category) params.set("category", category);
+    if (sort && sort !== "relevance") params.set("sort", sort);
+    router.replace(`/search?${params.toString()}`, { scroll: false });
+    fetchSkills(debouncedQuery, category, sort);
+  }, [debouncedQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const updateFilter = (cat: string, s: string) => {
+    setCategory(cat as SkillCategory | "");
+    setSort(s);
+    const params = new URLSearchParams();
+    if (debouncedQuery) params.set("q", debouncedQuery);
     if (cat) params.set("category", cat);
     if (s && s !== "relevance") params.set("sort", s);
     router.replace(`/search?${params.toString()}`, { scroll: false });
-    fetchSkills(q, cat, s);
+    fetchSkills(debouncedQuery, cat, s);
   };
+
+  const skeletonGrid = (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <SkillCardSkeleton key={i} />
+      ))}
+    </div>
+  );
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -85,7 +116,7 @@ function SearchContent() {
         <div className="relative flex-1">
           <input
             value={query}
-            onChange={(e) => { setQuery(e.target.value); updateURL(e.target.value, category, sort); }}
+            onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by name, keyword, description..."
             className="w-full rounded-lg bg-gray-900 border border-gray-700 px-4 py-2.5 pl-10 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
           />
@@ -96,7 +127,7 @@ function SearchContent() {
 
         <select
           value={category}
-          onChange={(e) => { setCategory(e.target.value as SkillCategory | ""); updateURL(query, e.target.value, sort); }}
+          onChange={(e) => updateFilter(e.target.value, sort)}
           className="rounded-lg bg-gray-900 border border-gray-700 px-4 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none appearance-none cursor-pointer min-w-[160px]"
         >
           <option value="">All Categories</option>
@@ -109,7 +140,7 @@ function SearchContent() {
 
         <select
           value={sort}
-          onChange={(e) => { setSort(e.target.value); updateURL(query, category, e.target.value); }}
+          onChange={(e) => updateFilter(category, e.target.value)}
           className="rounded-lg bg-gray-900 border border-gray-700 px-4 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none appearance-none cursor-pointer min-w-[140px]"
         >
           <option value="relevance">Relevance</option>
@@ -121,37 +152,79 @@ function SearchContent() {
       </div>
 
       {/* Results count */}
-      <p className="text-sm text-gray-500 mb-4">
-        {loading ? "Searching..." : (
-          <>
-            {results.length} skill{results.length !== 1 ? "s" : ""} found
-            {query && <> for &ldquo;<span className="text-gray-300">{query}</span>&rdquo;</>}
-            {category && <> in <span className="text-gray-300 capitalize">{category}</span></>}
-          </>
-        )}
-      </p>
+      {!loading && (
+        <p className="text-sm text-gray-500 mb-4">
+          {results.length} skill{results.length !== 1 ? "s" : ""} found
+          {query && <> for &ldquo;<span className="text-gray-300">{query}</span>&rdquo;</>}
+          {category && <> in <span className="text-gray-300 capitalize">{category}</span></>}
+        </p>
+      )}
 
-      {/* Results grid */}
-      {results.length > 0 ? (
+      {/* Results */}
+      {loading ? skeletonGrid : results.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {results.map((s) => (
             <SkillCard key={s.name} skill={s} />
           ))}
         </div>
-      ) : !loading ? (
+      ) : (
         <div className="text-center py-16">
           <p className="text-4xl mb-4">🔍</p>
           <p className="text-xl font-semibold mb-2">No skills found</p>
-          <p className="text-gray-400">Try adjusting your search or filters.</p>
+          <p className="text-gray-400 mb-6">
+            {query
+              ? `We couldn't find any skills matching "${query}".`
+              : "No skills match your current filters."}
+          </p>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500">Try one of these:</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {SUGGESTIONS.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => { setQuery(tag); }}
+                  className="rounded-full border border-gray-700 px-4 py-1.5 text-sm text-gray-300 hover:border-emerald-500/50 hover:text-emerald-400 transition-all"
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+            {category && (
+              <button
+                onClick={() => updateFilter("", sort)}
+                className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
+              >
+                Clear category filter →
+              </button>
+            )}
+            <div className="pt-4">
+              <p className="text-sm text-gray-500 mb-2">Can&apos;t find what you need?</p>
+              <Link
+                href="/publish"
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600/10 border border-emerald-500/30 px-4 py-2 text-sm text-emerald-400 hover:bg-emerald-600/20 transition-colors"
+              >
+                ✨ Create &amp; publish it yourself
+              </Link>
+            </div>
+          </div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={<div className="mx-auto max-w-7xl px-4 py-8"><p className="text-gray-400">Loading...</p></div>}>
+    <Suspense fallback={
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="h-8 bg-gray-700 rounded w-48 mb-6 animate-pulse" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkillCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    }>
       <SearchContent />
     </Suspense>
   );

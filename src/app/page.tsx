@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { CATEGORIES } from "@/lib/categories";
 import SkillCard from "@/components/SkillCard";
+import SkillCardSkeleton from "@/components/SkillCardSkeleton";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface APISkill {
   id: string;
@@ -24,6 +26,7 @@ interface APISkill {
   downloads: number;
   averageRating: number;
   reviewCount: number;
+  featured?: boolean;
   createdAt: string;
   updatedAt: string;
   author: { name: string | null; image: string | null };
@@ -52,10 +55,26 @@ function toSkill(s: APISkill) {
     downloads: s.downloads,
     rating: s.averageRating > 0 ? s.averageRating : undefined,
     ratingCount: s.reviewCount > 0 ? s.reviewCount : undefined,
-    featured: false, // TODO: add featured field to DB
+    featured: !!s.featured,
     createdAt: s.createdAt?.slice(0, 10),
     updatedAt: s.updatedAt?.slice(0, 10),
   };
+}
+
+function CategorySkeleton() {
+  return (
+    <>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 rounded-xl border border-gray-800 bg-gray-900/50 p-4 animate-pulse">
+          <div className="w-8 h-8 bg-gray-700 rounded" />
+          <div className="flex-1">
+            <div className="h-4 bg-gray-700 rounded w-20 mb-1" />
+            <div className="h-3 bg-gray-800 rounded w-12" />
+          </div>
+        </div>
+      ))}
+    </>
+  );
 }
 
 export default function Home() {
@@ -64,6 +83,7 @@ export default function Home() {
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const debouncedQ = useDebounce(q, 300);
 
   useEffect(() => {
     fetch("/api/skills")
@@ -76,13 +96,34 @@ export default function Home() {
       .finally(() => setLoading(false));
   }, []);
 
-  const popular = [...skills].sort((a, b) => (b.downloads ?? 0) - (a.downloads ?? 0)).slice(0, 6);
+  // Featured: skills marked featured, fallback to top downloads
+  const featured = skills.filter((s) => s.featured);
+  const popular = featured.length > 0
+    ? featured.slice(0, 6)
+    : [...skills].sort((a, b) => (b.downloads ?? 0) - (a.downloads ?? 0)).slice(0, 6);
+
   const newest = [...skills].sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "")).slice(0, 6);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (q.trim()) router.push(`/search?q=${encodeURIComponent(q.trim())}`);
+    if (debouncedQ.trim()) router.push(`/search?q=${encodeURIComponent(debouncedQ.trim())}`);
   };
+
+  // Live search: navigate on debounced value change
+  useEffect(() => {
+    // Only auto-navigate if user typed something (not on mount)
+    if (debouncedQ.trim().length >= 2) {
+      // Don't navigate, just let Enter/submit handle it — debounce is for search page
+    }
+  }, [debouncedQ]);
+
+  const skeletonGrid = (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <SkillCardSkeleton key={i} />
+      ))}
+    </div>
+  );
 
   return (
     <div className="space-y-16 pb-16">
@@ -128,33 +169,44 @@ export default function Home() {
       <section className="mx-auto max-w-7xl px-4 sm:px-6">
         <h2 className="text-2xl font-bold mb-6">📂 Browse by Category</h2>
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-          {CATEGORIES.filter((c) => (categoryCounts[c.value] ?? 0) > 0).map((cat) => (
-            <Link
-              key={cat.value}
-              href={`/search?category=${cat.value}`}
-              className="flex items-center gap-3 rounded-xl border border-gray-800 bg-gray-900/50 p-4 hover:border-emerald-500/50 hover:bg-gray-900 transition-all"
-            >
-              <span className="text-2xl">{cat.icon}</span>
-              <div>
-                <div className="text-sm font-medium text-white">{cat.label}</div>
-                <div className="text-xs text-gray-500">{categoryCounts[cat.value] ?? 0} skills</div>
-              </div>
-            </Link>
-          ))}
+          {loading ? (
+            <CategorySkeleton />
+          ) : (
+            CATEGORIES.map((cat) => {
+              const count = categoryCounts[cat.value] ?? 0;
+              return (
+                <Link
+                  key={cat.value}
+                  href={`/search?category=${cat.value}`}
+                  className={`flex items-center gap-3 rounded-xl border p-4 transition-all ${
+                    count > 0
+                      ? "border-gray-800 bg-gray-900/50 hover:border-emerald-500/50 hover:bg-gray-900"
+                      : "border-gray-800/50 bg-gray-900/20 opacity-50 cursor-default"
+                  }`}
+                >
+                  <span className="text-2xl">{cat.icon}</span>
+                  <div>
+                    <div className="text-sm font-medium text-white">{cat.label}</div>
+                    <div className="text-xs text-gray-500">{count} skill{count !== 1 ? "s" : ""}</div>
+                  </div>
+                </Link>
+              );
+            })
+          )}
         </div>
       </section>
 
-      {/* Popular */}
+      {/* Featured / Popular */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">🔥 Most Popular</h2>
+          <h2 className="text-2xl font-bold">
+            {featured.length > 0 ? "⭐ Featured Skills" : "🔥 Most Popular"}
+          </h2>
           <Link href="/search?sort=downloads" className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors">
             View all →
           </Link>
         </div>
-        {loading ? (
-          <p className="text-gray-500">Loading skills...</p>
-        ) : popular.length > 0 ? (
+        {loading ? skeletonGrid : popular.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {popular.map((s) => (
               <SkillCard key={s.name} skill={s} />
@@ -170,21 +222,26 @@ export default function Home() {
       </section>
 
       {/* Newest */}
-      {newest.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold">🆕 Recently Added</h2>
-            <Link href="/search?sort=newest" className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors">
-              View all →
-            </Link>
-          </div>
+      <section className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold">🆕 Recently Added</h2>
+          <Link href="/search?sort=newest" className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors">
+            View all →
+          </Link>
+        </div>
+        {loading ? skeletonGrid : newest.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {newest.map((s) => (
               <SkillCard key={s.name} skill={s} />
             ))}
           </div>
-        </section>
-      )}
+        ) : (
+          <div className="text-center py-12 text-gray-500">
+            <p className="text-4xl mb-3">🕐</p>
+            <p>New skills coming soon!</p>
+          </div>
+        )}
+      </section>
 
       {/* Become a Creator CTA */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6">

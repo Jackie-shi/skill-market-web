@@ -4,23 +4,30 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AuthProvider from "@/components/AuthProvider";
 
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://skillmarket.dev";
+
 export const metadata: Metadata = {
-  title: "Skill Market — AI Skills Marketplace",
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: "Skill Market — AI Skills Marketplace",
+    template: "%s | Skill Market",
+  },
   description: "Discover, share and trade AI Skills for Claude Code, OpenClaw, Cursor and beyond. Extend your AI tools in seconds.",
-  metadataBase: new URL("https://skillmarket.dev"),
+  alternates: { canonical: BASE_URL },
   openGraph: {
     title: "Skill Market — AI Skills Marketplace",
     description: "Discover, share and trade AI Skills for Claude Code, OpenClaw, Cursor and beyond.",
     type: "website",
     siteName: "Skill Market",
     locale: "en_US",
+    url: BASE_URL,
   },
   twitter: {
     card: "summary_large_image",
     title: "Skill Market — AI Skills Marketplace",
     description: "Discover, share and trade AI Skills for Claude Code, OpenClaw, Cursor and beyond.",
   },
-  keywords: ["AI skills", "Claude Code", "OpenClaw", "Cursor", "AI marketplace", "skill marketplace"],
+  keywords: ["AI skills", "Claude Code", "OpenClaw", "Cursor", "AI marketplace", "skill marketplace", "AI tools", "developer tools"],
   robots: { index: true, follow: true },
 };
 
