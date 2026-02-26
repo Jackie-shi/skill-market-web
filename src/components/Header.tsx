@@ -45,6 +45,9 @@ export default function Header() {
           <Link href="/search" className="text-sm text-gray-400 hover:text-white transition-colors">
             Browse
           </Link>
+          <Link href="/blog" className="text-sm text-gray-400 hover:text-white transition-colors">
+            Blog
+          </Link>
           <Link href="/publish" className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 transition-colors">
             Publish Skill
           </Link>
@@ -150,6 +153,7 @@ export default function Header() {
             />
           </form>
           <Link href="/search" className="block py-3 text-sm text-gray-400 hover:text-white" onClick={() => setMobileOpen(false)}>Browse All</Link>
+          <Link href="/blog" className="block py-3 text-sm text-gray-400 hover:text-white" onClick={() => setMobileOpen(false)}>Blog</Link>
           <Link href="/publish" className="block rounded-lg bg-emerald-600 px-4 py-3 text-sm font-medium text-white text-center" onClick={() => setMobileOpen(false)}>Publish Skill</Link>
           {session ? (
             <>
