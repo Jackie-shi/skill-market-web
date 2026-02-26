@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getSkillBySlug } from "@/lib/mock-data";
 import { trackDownload, getDownloadCount } from "@/lib/downloads";
+
+export const dynamic = "force-dynamic";
 
 /**
  * GET /api/skills/[slug]/download
@@ -15,15 +16,19 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
-  const skill = getSkillBySlug(params.slug);
+  const skill = await prisma.publishedSkill.findFirst({
+    where: { name: params.slug, status: "approved" },
+  });
+
   if (!skill) {
     return NextResponse.json({ error: "Skill not found" }, { status: 404 });
   }
 
   const format = request.nextUrl.searchParams.get("format") ?? "cli";
+  const platforms: string[] = skill.platforms ? JSON.parse(skill.platforms) : [];
 
   // Paid skill gate — verify purchase in DB
-  if (skill.pricing.model === "paid") {
+  if (skill.pricingModel === "paid") {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json(
@@ -33,31 +38,30 @@ export async function GET(
     }
 
     const userId = (session.user as any).id as string;
-
-    // Look up by skill name in PublishedSkill, then check purchase
-    const dbSkill = await prisma.publishedSkill.findFirst({ where: { name: skill.name } });
-    if (dbSkill) {
-      const purchase = await prisma.purchase.findFirst({
-        where: { userId, skillId: dbSkill.id, status: "completed" },
-      });
-      if (!purchase) {
-        return NextResponse.json(
-          {
-            error: "Payment required",
-            pricing: skill.pricing,
-            checkoutUrl: `/api/checkout`,
-          },
-          { status: 402 }
-        );
-      }
+    const purchase = await prisma.purchase.findFirst({
+      where: { userId, skillId: skill.id, status: "completed" },
+    });
+    if (!purchase) {
+      return NextResponse.json(
+        {
+          error: "Payment required",
+          pricing: { model: skill.pricingModel, price: skill.price, currency: skill.currency },
+          checkoutUrl: `/api/checkout`,
+        },
+        { status: 402 }
+      );
     }
   }
 
-  // Track download
+  // Track download & increment DB counter
   trackDownload(params.slug);
+  await prisma.publishedSkill.update({
+    where: { id: skill.id },
+    data: { downloads: { increment: 1 } },
+  });
   const totalDownloads = getDownloadCount(params.slug);
 
-  const installInfo = generateInstallInfo(skill.name, format, skill.compatibility.platforms);
+  const installInfo = generateInstallInfo(skill.name, format, platforms);
 
   return NextResponse.json({
     skill: skill.name,

@@ -1,22 +1,76 @@
 "use client";
 import { useParams } from "next/navigation";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getSkillBySlug } from "@/lib/mock-data";
 import PlatformBadge from "@/components/PlatformBadge";
 import PriceBadge from "@/components/PriceBadge";
 import InstallInstructions from "@/components/InstallInstructions";
+import ReviewSection from "@/components/ReviewSection";
+import { Skill } from "@/lib/types";
 
 const OS_LABELS: Record<string, string> = { darwin: "macOS", linux: "Linux", win32: "Windows" };
 
+function dbToSkill(s: any): Skill & { authorImage?: string; authorBio?: string } {
+  return {
+    name: s.name,
+    version: s.version,
+    displayName: s.displayName,
+    description: s.description,
+    longDescription: s.longDescription,
+    author: { name: s.author?.name ?? "Unknown", url: s.author?.websiteUrl },
+    license: s.license,
+    repository: s.repository,
+    keywords: s.keywords ? JSON.parse(s.keywords) : [],
+    category: s.category as any,
+    compatibility: {
+      platforms: s.platforms ? JSON.parse(s.platforms) : [],
+      os: s.osTargets ? JSON.parse(s.osTargets) : undefined,
+    },
+    pricing: {
+      model: s.pricingModel as any,
+      price: s.price > 0 ? s.price : undefined,
+      currency: s.currency as any,
+    },
+    downloads: s.downloads,
+    rating: s.averageRating > 0 ? s.averageRating : undefined,
+    ratingCount: s.reviewCount > 0 ? s.reviewCount : undefined,
+    createdAt: s.createdAt?.slice(0, 10),
+    updatedAt: s.updatedAt?.slice(0, 10),
+    authorImage: s.author?.image,
+    authorBio: s.author?.bio,
+  };
+}
+
 export default function SkillDetailPage() {
   const { slug } = useParams<{ slug: string }>();
-  const skill = getSkillBySlug(slug);
+  const [skill, setSkill] = useState<(Skill & { authorImage?: string; authorBio?: string }) | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  if (!skill) {
+  useEffect(() => {
+    fetch(`/api/skills/${slug}`)
+      .then((r) => {
+        if (!r.ok) throw new Error("not found");
+        return r.json();
+      })
+      .then((data) => setSkill(dbToSkill(data.skill)))
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-24 text-center">
+        <p className="text-gray-400">Loading skill...</p>
+      </div>
+    );
+  }
+
+  if (error || !skill) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-24 text-center">
         <h1 className="text-3xl font-bold mb-4">Skill not found</h1>
-        <p className="text-gray-400 mb-6">The skill &ldquo;{slug}&rdquo; doesn&apos;t exist.</p>
+        <p className="text-gray-400 mb-6">The skill &ldquo;{slug}&rdquo; doesn&apos;t exist or hasn&apos;t been approved yet.</p>
         <Link href="/search" className="text-emerald-400 hover:text-emerald-300">← Browse all skills</Link>
       </div>
     );
@@ -44,7 +98,12 @@ export default function SkillDetailPage() {
             </div>
             <p className="text-lg text-gray-400 mb-4">{skill.description}</p>
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-              <span>by <span className="text-gray-300">{skill.author.name}</span></span>
+              <span className="flex items-center gap-2">
+                {skill.authorImage && (
+                  <img src={skill.authorImage} alt="" className="w-5 h-5 rounded-full" />
+                )}
+                by <span className="text-gray-300">{skill.author.name}</span>
+              </span>
               <span>v{skill.version}</span>
               {skill.license && <span>{skill.license}</span>}
               {skill.updatedAt && <span>Updated {skill.updatedAt}</span>}
@@ -55,7 +114,7 @@ export default function SkillDetailPage() {
           <div className="flex flex-wrap gap-6 rounded-xl border border-gray-800 bg-gray-900/50 p-4">
             {skill.rating != null && (
               <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-400">★ {skill.rating}</div>
+                <div className="text-2xl font-bold text-yellow-400">★ {skill.rating.toFixed(1)}</div>
                 <div className="text-xs text-gray-500">{skill.ratingCount} ratings</div>
               </div>
             )}
@@ -70,6 +129,9 @@ export default function SkillDetailPage() {
               <div className="text-xs text-gray-500">platforms</div>
             </div>
           </div>
+
+          {/* Reviews */}
+          <ReviewSection skillSlug={slug} />
 
           {/* Long description */}
           {skill.longDescription && (
@@ -127,7 +189,7 @@ export default function SkillDetailPage() {
           )}
 
           {/* Links */}
-          {(skill.repository || skill.homepage) && (
+          {(skill.repository || skill.homepage || skill.author.url) && (
             <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 space-y-2">
               <h3 className="font-semibold mb-2">Links</h3>
               {skill.repository && (
@@ -135,6 +197,9 @@ export default function SkillDetailPage() {
               )}
               {skill.homepage && (
                 <a href={skill.homepage} target="_blank" rel="noopener" className="block text-sm text-emerald-400 hover:text-emerald-300 truncate">🌐 Homepage</a>
+              )}
+              {skill.author.url && (
+                <a href={skill.author.url} target="_blank" rel="noopener" className="block text-sm text-emerald-400 hover:text-emerald-300 truncate">👤 Author Website</a>
               )}
             </div>
           )}

@@ -1,9 +1,36 @@
 "use client";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense, useState, useMemo } from "react";
-import { searchSkills, CATEGORIES } from "@/lib/mock-data";
+import { Suspense, useState, useEffect, useCallback } from "react";
+import { CATEGORIES } from "@/lib/categories";
 import { SkillCategory } from "@/lib/types";
 import SkillCard from "@/components/SkillCard";
+
+function toSkill(s: any) {
+  return {
+    name: s.name,
+    version: s.version,
+    displayName: s.displayName,
+    description: s.description,
+    author: { name: s.author?.name ?? "Unknown" },
+    license: s.license,
+    keywords: s.keywords ? JSON.parse(s.keywords) : [],
+    category: s.category as any,
+    compatibility: {
+      platforms: s.platforms ? JSON.parse(s.platforms) : [],
+      os: s.osTargets ? JSON.parse(s.osTargets) : undefined,
+    },
+    pricing: {
+      model: s.pricingModel as any,
+      price: s.price > 0 ? s.price : undefined,
+      currency: s.currency as any,
+    },
+    downloads: s.downloads,
+    rating: s.averageRating > 0 ? s.averageRating : undefined,
+    ratingCount: s.reviewCount > 0 ? s.reviewCount : undefined,
+    createdAt: s.createdAt?.slice(0, 10),
+    updatedAt: s.updatedAt?.slice(0, 10),
+  };
+}
 
 function SearchContent() {
   const searchParams = useSearchParams();
@@ -15,11 +42,30 @@ function SearchContent() {
   const [query, setQuery] = useState(initialQ);
   const [category, setCategory] = useState<SkillCategory | "">(initialCat ?? "");
   const [sort, setSort] = useState(initialSort);
+  const [results, setResults] = useState<ReturnType<typeof toSkill>[]>([]);
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
 
-  const results = useMemo(
-    () => searchSkills(query, category || undefined, sort),
-    [query, category, sort]
-  );
+  const fetchSkills = useCallback((q: string, cat: string, s: string) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (cat) params.set("category", cat);
+    if (s && s !== "relevance") params.set("sort", s);
+
+    setLoading(true);
+    fetch(`/api/skills?${params.toString()}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.skills) setResults(data.skills.map(toSkill));
+        if (data.categoryCounts) setCategoryCounts(data.categoryCounts);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    fetchSkills(initialQ, initialCat ?? "", initialSort);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateURL = (q: string, cat: string, s: string) => {
     const params = new URLSearchParams();
@@ -27,6 +73,7 @@ function SearchContent() {
     if (cat) params.set("category", cat);
     if (s && s !== "relevance") params.set("sort", s);
     router.replace(`/search?${params.toString()}`, { scroll: false });
+    fetchSkills(q, cat, s);
   };
 
   return (
@@ -55,7 +102,7 @@ function SearchContent() {
           <option value="">All Categories</option>
           {CATEGORIES.map((c) => (
             <option key={c.value} value={c.value}>
-              {c.icon} {c.label} ({c.count})
+              {c.icon} {c.label} ({categoryCounts[c.value] ?? 0})
             </option>
           ))}
         </select>
@@ -75,9 +122,13 @@ function SearchContent() {
 
       {/* Results count */}
       <p className="text-sm text-gray-500 mb-4">
-        {results.length} skill{results.length !== 1 ? "s" : ""} found
-        {query && <> for &ldquo;<span className="text-gray-300">{query}</span>&rdquo;</>}
-        {category && <> in <span className="text-gray-300 capitalize">{category}</span></>}
+        {loading ? "Searching..." : (
+          <>
+            {results.length} skill{results.length !== 1 ? "s" : ""} found
+            {query && <> for &ldquo;<span className="text-gray-300">{query}</span>&rdquo;</>}
+            {category && <> in <span className="text-gray-300 capitalize">{category}</span></>}
+          </>
+        )}
       </p>
 
       {/* Results grid */}
@@ -87,13 +138,13 @@ function SearchContent() {
             <SkillCard key={s.name} skill={s} />
           ))}
         </div>
-      ) : (
+      ) : !loading ? (
         <div className="text-center py-16">
           <p className="text-4xl mb-4">🔍</p>
           <p className="text-xl font-semibold mb-2">No skills found</p>
           <p className="text-gray-400">Try adjusting your search or filters.</p>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

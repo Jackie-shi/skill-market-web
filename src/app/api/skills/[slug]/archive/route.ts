@@ -1,25 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSkillBySlug } from "@/lib/mock-data";
+import { prisma } from "@/lib/prisma";
 import { trackDownload } from "@/lib/downloads";
+
+export const dynamic = "force-dynamic";
 
 /**
  * GET /api/skills/[slug]/archive?format=zip
  *
- * Returns a downloadable ZIP archive of the skill.
- * MVP: generates a minimal placeholder zip with SKILL.md + skill.json.
+ * Returns a downloadable archive of the skill.
+ * MVP: generates a minimal placeholder JSON manifest.
  * Production: serve pre-built archives from object storage.
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
-  const skill = getSkillBySlug(params.slug);
+  const skill = await prisma.publishedSkill.findFirst({
+    where: { name: params.slug, status: "approved" },
+    include: { author: { select: { name: true } } },
+  });
+
   if (!skill) {
     return NextResponse.json({ error: "Skill not found" }, { status: 404 });
   }
 
   // Check paid gate
-  if (skill.pricing.model === "paid") {
+  if (skill.pricingModel === "paid") {
     const token = request.nextUrl.searchParams.get("token");
     if (!token) {
       return NextResponse.json(
@@ -32,14 +38,15 @@ export async function GET(
   trackDownload(params.slug);
 
   // MVP: return a JSON manifest as downloadable file
-  // Production: stream actual zip from S3/R2
   const manifest = {
     name: skill.name,
     version: skill.version,
     displayName: skill.displayName,
     description: skill.description,
-    author: skill.author,
-    compatibility: skill.compatibility,
+    author: { name: skill.author?.name ?? "Unknown" },
+    compatibility: {
+      platforms: skill.platforms ? JSON.parse(skill.platforms) : [],
+    },
     install: `clawhub install ${skill.name}`,
     note: "Full ZIP archives available after storage integration. Use CLI install for now.",
   };

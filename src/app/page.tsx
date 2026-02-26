@@ -2,26 +2,82 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { SKILLS as MOCK_SKILLS, CATEGORIES } from "@/lib/mock-data";
+import { CATEGORIES } from "@/lib/categories";
 import SkillCard from "@/components/SkillCard";
-import { Skill } from "@/lib/types";
+
+interface APISkill {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  longDescription?: string;
+  version: string;
+  category: string;
+  price: number;
+  currency: string;
+  pricingModel: string;
+  platforms: string;
+  osTargets?: string;
+  keywords?: string;
+  license?: string;
+  repository?: string;
+  downloads: number;
+  averageRating: number;
+  reviewCount: number;
+  createdAt: string;
+  updatedAt: string;
+  author: { name: string | null; image: string | null };
+}
+
+function toSkill(s: APISkill) {
+  return {
+    name: s.name,
+    version: s.version,
+    displayName: s.displayName,
+    description: s.description,
+    longDescription: s.longDescription,
+    author: { name: s.author?.name ?? "Unknown" },
+    license: s.license,
+    keywords: s.keywords ? JSON.parse(s.keywords) : [],
+    category: s.category as any,
+    compatibility: {
+      platforms: s.platforms ? JSON.parse(s.platforms) : [],
+      os: s.osTargets ? JSON.parse(s.osTargets) : undefined,
+    },
+    pricing: {
+      model: s.pricingModel as any,
+      price: s.price > 0 ? s.price : undefined,
+      currency: s.currency as any,
+    },
+    downloads: s.downloads,
+    rating: s.averageRating > 0 ? s.averageRating : undefined,
+    ratingCount: s.reviewCount > 0 ? s.reviewCount : undefined,
+    featured: false, // TODO: add featured field to DB
+    createdAt: s.createdAt?.slice(0, 10),
+    updatedAt: s.updatedAt?.slice(0, 10),
+  };
+}
 
 export default function Home() {
   const [q, setQ] = useState("");
-  const [skills, setSkills] = useState<Skill[]>(MOCK_SKILLS);
+  const [skills, setSkills] = useState<ReturnType<typeof toSkill>[]>([]);
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     fetch("/api/skills")
       .then((r) => r.json())
       .then((data) => {
-        if (data.skills && data.skills.length > 0) setSkills(data.skills);
+        if (data.skills) setSkills(data.skills.map(toSkill));
+        if (data.categoryCounts) setCategoryCounts(data.categoryCounts);
       })
-      .catch(() => {}); // fallback to mock data
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  const featured = skills.filter((s) => s.featured);
   const popular = [...skills].sort((a, b) => (b.downloads ?? 0) - (a.downloads ?? 0)).slice(0, 6);
+  const newest = [...skills].sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "")).slice(0, 6);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,26 +124,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">⭐ Featured Skills</h2>
-          <Link href="/search" className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors">
-            View all →
-          </Link>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {featured.map((s) => (
-            <SkillCard key={s.name} skill={s} />
-          ))}
-        </div>
-      </section>
-
       {/* Categories */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6">
         <h2 className="text-2xl font-bold mb-6">📂 Browse by Category</h2>
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-          {CATEGORIES.filter((c) => c.count > 0).map((cat) => (
+          {CATEGORIES.filter((c) => (categoryCounts[c.value] ?? 0) > 0).map((cat) => (
             <Link
               key={cat.value}
               href={`/search?category=${cat.value}`}
@@ -96,7 +137,7 @@ export default function Home() {
               <span className="text-2xl">{cat.icon}</span>
               <div>
                 <div className="text-sm font-medium text-white">{cat.label}</div>
-                <div className="text-xs text-gray-500">{cat.count} skills</div>
+                <div className="text-xs text-gray-500">{categoryCounts[cat.value] ?? 0} skills</div>
               </div>
             </Link>
           ))}
@@ -105,13 +146,45 @@ export default function Home() {
 
       {/* Popular */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6">
-        <h2 className="text-2xl font-bold mb-6">🔥 Most Popular</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {popular.map((s) => (
-            <SkillCard key={s.name} skill={s} />
-          ))}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold">🔥 Most Popular</h2>
+          <Link href="/search?sort=downloads" className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors">
+            View all →
+          </Link>
         </div>
+        {loading ? (
+          <p className="text-gray-500">Loading skills...</p>
+        ) : popular.length > 0 ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {popular.map((s) => (
+              <SkillCard key={s.name} skill={s} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 text-gray-500">
+            <p className="text-4xl mb-3">🌱</p>
+            <p>No skills published yet. Be the first creator!</p>
+            <Link href="/publish" className="text-emerald-400 hover:text-emerald-300 mt-2 inline-block">Publish a Skill →</Link>
+          </div>
+        )}
       </section>
+
+      {/* Newest */}
+      {newest.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold">🆕 Recently Added</h2>
+            <Link href="/search?sort=newest" className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors">
+              View all →
+            </Link>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {newest.map((s) => (
+              <SkillCard key={s.name} skill={s} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Become a Creator CTA */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6">

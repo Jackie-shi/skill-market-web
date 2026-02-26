@@ -48,14 +48,15 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   // Stripe
-  stripeCustomerId  String? @unique
-  stripeConnectId   String? @unique
+  stripeCustomerId       String? @unique
+  stripeConnectId        String? @unique
   stripeConnectOnboarded Boolean @default(false)
 
   accounts        Account[]
   sessions        Session[]
   publishedSkills PublishedSkill[]
   purchases       Purchase[]
+  reviews         Review[]
 }
 
 model VerificationToken {
@@ -67,32 +68,53 @@ model VerificationToken {
 }
 
 model PublishedSkill {
-  id              String   @id @default(cuid())
-  name            String   @unique
+  id              String    @id @default(cuid())
+  name            String    @unique
   displayName     String
   description     String
   longDescription String?
   version         String
   category        String
-  price           Float    @default(0)
-  currency        String   @default("USD")
-  pricingModel    String   @default("free")
-  platforms       String   // JSON array as string
-  osTargets       String?  // JSON array as string
-  keywords        String?  // JSON array as string
+  price           Float     @default(0)
+  currency        String    @default("USD")
+  pricingModel    String    @default("free")
+  platforms       String // JSON array as string
+  osTargets       String? // JSON array as string
+  keywords        String? // JSON array as string
   license         String?
   repository      String?
-  downloads       Int      @default(0)
-  status          String   @default("pending") // pending, approved, rejected
+  downloads       Int       @default(0)
+  status          String    @default("pending") // pending, approved, rejected
   reviewNote      String?
   reviewedAt      DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   authorId String
   author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   purchases Purchase[]
+  reviews   Review[]
+
+  // Cached rating
+  averageRating Float @default(0)
+  reviewCount   Int   @default(0)
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId  String
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skillId String
+  skill   PublishedSkill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skillId]) // one review per user per skill
+  @@index([skillId])
 }
 
 model Purchase {
@@ -103,13 +125,13 @@ model Purchase {
   createdAt DateTime @default(now())
 
   // Stripe
-  stripeSessionId   String? @unique
+  stripeSessionId     String? @unique
   stripePaymentIntent String?
-  platformFee       Float?  // 15% platform cut
-  creatorPayout     Float?  // 85% creator share
+  platformFee         Float? // 15% platform cut
+  creatorPayout       Float? // 85% creator share
 
   userId  String
-  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   skillId String
   skill   PublishedSkill @relation(fields: [skillId], references: [id], onDelete: Cascade)
 }

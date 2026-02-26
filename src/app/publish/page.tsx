@@ -2,7 +2,7 @@
 import { useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { CATEGORIES } from "@/lib/mock-data";
+import { CATEGORIES } from "@/lib/categories";
 
 const PLATFORMS = [
   { value: "openclaw", label: "OpenClaw" },
