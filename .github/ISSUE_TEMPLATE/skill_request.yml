@@ -1,0 +1,28 @@
+name: 📦 Skill Request
+description: Request a skill you'd like to see on the marketplace
+labels: ["skill-request"]
+body:
+  - type: input
+    id: skill_name
+    attributes:
+      label: Skill Name / Topic
+      placeholder: "Kubernetes deployment helper"
+    validations:
+      required: true
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use Case
+      description: What would this skill do? When would you use it?
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Target Platform
+      options:
+        - Claude Code
+        - OpenClaw
+        - Cursor
+        - Windsurf
+        - Any / Generic

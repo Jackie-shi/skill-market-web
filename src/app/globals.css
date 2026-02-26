@@ -1,3 +1,12 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+/* Select dropdown fix for dark mode */
+select option { background: #111827; color: #f9fafb; }
