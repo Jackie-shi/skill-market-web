@@ -69,6 +69,7 @@ function dbToSkill(s: any): Skill & { authorImage?: string; authorBio?: string; 
 export default function SkillDetailClient({ slug }: { slug: string }) {
   const [skill, setSkill] = useState<(Skill & { authorImage?: string; authorBio?: string; authorId?: string; authorGithubUrl?: string }) | null>(null);
   const [relatedSkills, setRelatedSkills] = useState<RelatedSkill[]>([]);
+  const [versions, setVersions] = useState<{ id: string; version: string; changelog: string | null; createdAt: string }[]>([]);
   const [authorSkillCount, setAuthorSkillCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -82,6 +83,7 @@ export default function SkillDetailClient({ slug }: { slug: string }) {
       .then((data) => {
         setSkill(dbToSkill(data.skill));
         setRelatedSkills(data.relatedSkills ?? []);
+        setVersions(data.versions ?? []);
         setAuthorSkillCount(data.authorSkillCount ?? 0);
       })
       .catch(() => setError(true))
