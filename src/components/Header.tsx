@@ -123,8 +123,8 @@ export default function Header() {
         </nav>
 
         {/* Mobile menu button */}
-        <button onClick={() => setMobileOpen(!mobileOpen)} className="sm:hidden p-2 text-gray-400">
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <button onClick={() => setMobileOpen(!mobileOpen)} className="sm:hidden p-2 text-gray-400" aria-label={mobileOpen ? "Close menu" : "Open menu"} aria-expanded={mobileOpen}>
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             {mobileOpen ? (
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             ) : (

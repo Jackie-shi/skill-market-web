@@ -1,15 +1,32 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import PlatformBadge from "@/components/PlatformBadge";
 import PriceBadge from "@/components/PriceBadge";
 import InstallInstructions from "@/components/InstallInstructions";
 import ReviewSection from "@/components/ReviewSection";
+import CopyButton from "@/components/CopyButton";
 import { Skill } from "@/lib/types";
 
 const OS_LABELS: Record<string, string> = { darwin: "macOS", linux: "Linux", win32: "Windows" };
 
-function dbToSkill(s: any): Skill & { authorImage?: string; authorBio?: string } {
+interface RelatedSkill {
+  name: string;
+  displayName: string;
+  description: string;
+  category: string;
+  pricingModel: string;
+  price: number;
+  currency: string;
+  downloads: number;
+  averageRating: number;
+  reviewCount: number;
+  platforms: string;
+}
+
+function dbToSkill(s: any): Skill & { authorImage?: string; authorBio?: string; authorId?: string; authorGithubUrl?: string } {
   return {
     name: s.name,
     version: s.version,
@@ -37,11 +54,15 @@ function dbToSkill(s: any): Skill & { authorImage?: string; authorBio?: string }
     updatedAt: s.updatedAt?.slice(0, 10),
     authorImage: s.author?.image,
     authorBio: s.author?.bio,
+    authorId: s.author?.id,
+    authorGithubUrl: s.author?.githubUrl,
   };
 }
 
 export default function SkillDetailClient({ slug }: { slug: string }) {
-  const [skill, setSkill] = useState<(Skill & { authorImage?: string; authorBio?: string }) | null>(null);
+  const [skill, setSkill] = useState<(Skill & { authorImage?: string; authorBio?: string; authorId?: string; authorGithubUrl?: string }) | null>(null);
+  const [relatedSkills, setRelatedSkills] = useState<RelatedSkill[]>([]);
+  const [authorSkillCount, setAuthorSkillCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -51,7 +72,11 @@ export default function SkillDetailClient({ slug }: { slug: string }) {
         if (!r.ok) throw new Error("not found");
         return r.json();
       })
-      .then((data) => setSkill(dbToSkill(data.skill)))
+      .then((data) => {
+        setSkill(dbToSkill(data.skill));
+        setRelatedSkills(data.relatedSkills ?? []);
+        setAuthorSkillCount(data.authorSkillCount ?? 0);
+      })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [slug]);
@@ -74,6 +99,10 @@ export default function SkillDetailClient({ slug }: { slug: string }) {
     );
   }
 
+  const installCmd = skill.compatibility.platforms.includes("openclaw")
+    ? `clawhub install ${skill.name}`
+    : `npx clawhub install ${skill.name}`;
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       {/* Breadcrumb */}
@@ -95,6 +124,13 @@ export default function SkillDetailClient({ slug }: { slug: string }) {
               <PriceBadge pricing={skill.pricing} />
             </div>
             <p className="text-lg text-gray-400 mb-4">{skill.description}</p>
+
+            {/* Quick install copy bar */}
+            <div className="flex items-center gap-2 rounded-lg bg-gray-950 border border-gray-800 p-2 mb-4">
+              <code className="flex-1 text-sm text-emerald-400 font-mono px-2 truncate">{installCmd}</code>
+              <CopyButton text={installCmd} label="Copy" className="shrink-0 rounded-md bg-emerald-600 hover:bg-emerald-500 px-4 py-1.5 text-xs font-semibold text-white transition-colors" />
+            </div>
+
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
               <span className="flex items-center gap-2">
                 {skill.authorImage && (
@@ -131,17 +167,51 @@ export default function SkillDetailClient({ slug }: { slug: string }) {
           {/* Reviews */}
           <ReviewSection skillSlug={slug} />
 
-          {/* Long description */}
+          {/* Long description — Markdown rendered */}
           {skill.longDescription && (
-            <div className="prose prose-invert prose-sm max-w-none">
+            <div className="prose prose-invert prose-sm max-w-none prose-headings:text-gray-100 prose-a:text-emerald-400 prose-code:text-emerald-300 prose-code:bg-gray-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-pre:bg-gray-950 prose-pre:border prose-pre:border-gray-800">
               <h2 className="text-xl font-bold mb-4">About</h2>
-              {skill.longDescription.split("\n").map((line, i) => {
-                if (line.startsWith("## ")) return <h3 key={i} className="text-lg font-semibold mt-6 mb-2">{line.replace("## ", "")}</h3>;
-                if (line.startsWith("- ")) return <li key={i} className="text-gray-300 ml-4">{line.replace("- ", "")}</li>;
-                if (line.match(/^\d+\./)) return <li key={i} className="text-gray-300 ml-4 list-decimal">{line.replace(/^\d+\.\s*/, "")}</li>;
-                if (line.trim() === "") return <br key={i} />;
-                return <p key={i} className="text-gray-300">{line}</p>;
-              })}
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {skill.longDescription}
+              </ReactMarkdown>
+            </div>
+          )}
+
+          {/* Related Skills */}
+          {relatedSkills.length > 0 && (
+            <div>
+              <h2 className="text-xl font-bold mb-4">Related Skills</h2>
+              <div className="grid sm:grid-cols-2 gap-4">
+                {relatedSkills.map((rs) => {
+                  const platforms = rs.platforms ? JSON.parse(rs.platforms) : [];
+                  return (
+                    <Link
+                      key={rs.name}
+                      href={`/skills/${rs.name}`}
+                      className="rounded-xl border border-gray-800 bg-gray-900/50 p-4 hover:border-gray-700 hover:bg-gray-900/80 transition-colors group"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-semibold text-gray-100 group-hover:text-emerald-400 transition-colors">{rs.displayName}</h3>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          rs.pricingModel === "free" ? "bg-emerald-900/50 text-emerald-400" : "bg-amber-900/50 text-amber-400"
+                        }`}>
+                          {rs.pricingModel === "free" ? "Free" : `$${rs.price}`}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-400 line-clamp-2 mb-3">{rs.description}</p>
+                      <div className="flex items-center gap-3 text-xs text-gray-500">
+                        {rs.averageRating > 0 && <span className="text-yellow-400">★ {rs.averageRating.toFixed(1)}</span>}
+                        <span>{rs.downloads.toLocaleString()} downloads</span>
+                        <div className="flex gap-1">
+                          {platforms.slice(0, 3).map((p: string) => (
+                            <PlatformBadge key={p} platform={p} />
+                          ))}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -150,6 +220,41 @@ export default function SkillDetailClient({ slug }: { slug: string }) {
         <div className="space-y-6">
           {/* Install card */}
           <InstallInstructions skill={skill} />
+
+          {/* Author card */}
+          <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 space-y-3">
+            <h3 className="font-semibold">Author</h3>
+            <div className="flex items-center gap-3">
+              {skill.authorImage ? (
+                <img src={skill.authorImage} alt={skill.author.name} className="w-10 h-10 rounded-full" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 text-lg font-bold">
+                  {(skill.author.name ?? "?")[0].toUpperCase()}
+                </div>
+              )}
+              <div>
+                {skill.authorId ? (
+                  <Link href={`/profile/${skill.authorId}`} className="font-medium text-gray-100 hover:text-emerald-400 transition-colors">
+                    {skill.author.name}
+                  </Link>
+                ) : (
+                  <span className="font-medium text-gray-100">{skill.author.name}</span>
+                )}
+                <div className="text-xs text-gray-500">{authorSkillCount} published skill{authorSkillCount !== 1 ? "s" : ""}</div>
+              </div>
+            </div>
+            {skill.authorBio && (
+              <p className="text-sm text-gray-400">{skill.authorBio}</p>
+            )}
+            <div className="flex gap-2">
+              {skill.authorId && (
+                <Link href={`/profile/${skill.authorId}`} className="text-xs text-emerald-400 hover:text-emerald-300">View profile →</Link>
+              )}
+              {skill.authorGithubUrl && (
+                <a href={skill.authorGithubUrl} target="_blank" rel="noopener" className="text-xs text-gray-400 hover:text-gray-300">GitHub</a>
+              )}
+            </div>
+          </div>
 
           {/* Compatibility */}
           <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 space-y-3">

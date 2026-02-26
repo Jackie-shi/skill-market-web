@@ -1,10 +1,24 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AuthProvider from "@/components/AuthProvider";
 
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
+
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://skillmarket.dev";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: "#030712",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
@@ -33,8 +47,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <body className="antialiased bg-gray-950 text-white min-h-screen flex flex-col">
+    <html lang="en" className={`dark ${inter.variable}`}>
+      <body className={`${inter.className} antialiased bg-gray-950 text-white min-h-screen flex flex-col`}>
         <AuthProvider>
           <Header />
           <main className="flex-1">{children}</main>

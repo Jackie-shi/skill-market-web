@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import Image from "next/image";
 
 interface ReviewUser {
   id: string;
@@ -183,7 +184,7 @@ export default function ReviewSection({ skillSlug }: { skillSlug: string }) {
             <div key={review.id} className="rounded-xl border border-gray-800 bg-gray-900/30 p-4 space-y-2">
               <div className="flex items-center gap-3">
                 {review.user.image && (
-                  <img src={review.user.image} alt="" className="w-8 h-8 rounded-full" />
+                  <Image src={review.user.image} alt={review.user.name ?? "User"} width={32} height={32} className="rounded-full" />
                 )}
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
