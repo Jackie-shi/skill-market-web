@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { validateSubmission } from "@/lib/skill-validator";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -27,16 +28,36 @@ export async function POST(req: NextRequest) {
     repository,
   } = body;
 
-  // Validation
+  // Basic required field check
   if (!name || !displayName || !description || !version || !category) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
   if (!platforms || !Array.isArray(platforms) || platforms.length === 0) {
     return NextResponse.json({ error: "At least one platform is required" }, { status: 400 });
   }
-  if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(name) || name.length < 3 || name.length > 50) {
-    return NextResponse.json({ error: "Invalid skill name format" }, { status: 400 });
+
+  // ── Quality validation ──
+  const validation = validateSubmission(body);
+  if (!validation.passed) {
+    return NextResponse.json(
+      {
+        error: "Quality check failed",
+        details: validation.errors.map((e) => ({
+          code: e.code,
+          message: e.message,
+          field: e.field,
+        })),
+        warnings: validation.warnings.map((w) => ({
+          code: w.code,
+          message: w.message,
+          field: w.field,
+        })),
+      },
+      { status: 422 }
+    );
   }
+
+  // Pricing validation
   if ((pricingModel === "paid" || pricingModel === "freemium") && (!price || price < 0.99)) {
     return NextResponse.json({ error: "Price must be at least $0.99 for paid skills" }, { status: 400 });
   }
@@ -67,5 +88,15 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ skill }, { status: 201 });
+  // Include warnings in successful response
+  const response: Record<string, unknown> = { skill };
+  if (validation.warnings.length > 0) {
+    response.warnings = validation.warnings.map((w) => ({
+      code: w.code,
+      message: w.message,
+      field: w.field,
+    }));
+  }
+
+  return NextResponse.json(response, { status: 201 });
 }

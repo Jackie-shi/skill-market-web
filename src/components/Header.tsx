@@ -88,11 +88,11 @@ export default function Header() {
                       My Profile
                     </Link>
                     <Link
-                      href="/profile/skills"
+                      href="/dashboard"
                       className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white"
                       onClick={() => setUserMenuOpen(false)}
                     >
-                      My Skills
+                      Dashboard
                     </Link>
                     <Link
                       href="/profile/purchases"
@@ -154,7 +154,7 @@ export default function Header() {
           {session ? (
             <>
               <Link href="/profile" className="block py-3 text-sm text-gray-400 hover:text-white" onClick={() => setMobileOpen(false)}>My Profile</Link>
-              <Link href="/profile/skills" className="block py-3 text-sm text-gray-400 hover:text-white" onClick={() => setMobileOpen(false)}>My Skills</Link>
+              <Link href="/dashboard" className="block py-3 text-sm text-gray-400 hover:text-white" onClick={() => setMobileOpen(false)}>Dashboard</Link>
               <Link href="/profile/purchases" className="block py-3 text-sm text-gray-400 hover:text-white" onClick={() => setMobileOpen(false)}>Purchases</Link>
               <button onClick={() => signOut()} className="block py-3 text-sm text-red-400 hover:text-red-300">Sign Out</button>
             </>

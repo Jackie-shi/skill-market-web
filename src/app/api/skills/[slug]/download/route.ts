@@ -25,7 +25,18 @@ export async function GET(
   }
 
   const format = request.nextUrl.searchParams.get("format") ?? "cli";
+  const requestedVersion = request.nextUrl.searchParams.get("version");
   const platforms: string[] = skill.platforms ? JSON.parse(skill.platforms) : [];
+
+  // If a specific version is requested, validate it exists
+  if (requestedVersion && requestedVersion !== skill.version) {
+    const versionRecord = await prisma.skillVersion.findFirst({
+      where: { skillId: skill.id, version: requestedVersion },
+    });
+    if (!versionRecord) {
+      return NextResponse.json({ error: `Version ${requestedVersion} not found` }, { status: 404 });
+    }
+  }
 
   // Paid skill gate — verify purchase in DB
   if (skill.pricingModel === "paid") {
@@ -63,9 +74,12 @@ export async function GET(
 
   const installInfo = generateInstallInfo(skill.name, format, platforms);
 
+  const downloadVersion = requestedVersion || skill.version;
+
   return NextResponse.json({
     skill: skill.name,
-    version: skill.version,
+    version: downloadVersion,
+    isLatest: downloadVersion === skill.version,
     format,
     totalDownloads,
     install: installInfo,

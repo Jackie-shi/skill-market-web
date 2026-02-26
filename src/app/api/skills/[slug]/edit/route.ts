@@ -85,6 +85,13 @@ export async function PUT(
   if (license !== undefined) updateData.license = license;
   if (repository !== undefined) updateData.repository = repository || null;
 
+  // If skill was approved, editing sends it back for re-review
+  if (skill.status === "approved" && Object.keys(updateData).length > 0) {
+    updateData.status = "pending";
+    updateData.reviewNote = null;
+    updateData.reviewedAt = null;
+  }
+
   const updated = await prisma.publishedSkill.update({
     where: { id: skill.id },
     data: updateData,

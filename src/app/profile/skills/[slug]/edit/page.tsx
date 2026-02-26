@@ -3,6 +3,7 @@ import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CATEGORIES } from "@/lib/categories";
+import ReactMarkdown from "react-markdown";
 
 const PLATFORMS = [
   { value: "openclaw", label: "OpenClaw" },
@@ -29,6 +30,14 @@ export default function EditSkillPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
+  const [showVersionModal, setShowVersionModal] = useState(false);
+  const [newVersion, setNewVersion] = useState("");
+  const [changelog, setChangelog] = useState("");
+  const [publishingVersion, setPublishingVersion] = useState(false);
+  const [versionError, setVersionError] = useState("");
+  const [versionSuccess, setVersionSuccess] = useState("");
+
+  const [showMdPreview, setShowMdPreview] = useState(false);
   const [form, setForm] = useState({
     displayName: "", description: "", longDescription: "", version: "",
     category: "", pricingModel: "free", price: "", platforms: [] as string[],
@@ -100,6 +109,31 @@ export default function EditSkillPage() {
     }
   };
 
+  const handlePublishVersion = async () => {
+    setVersionError("");
+    setVersionSuccess("");
+    if (!newVersion) { setVersionError("Version is required"); return; }
+    setPublishingVersion(true);
+    try {
+      const res = await fetch(`/api/skills/${slug}/versions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ version: newVersion, changelog: changelog || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setVersionError(data.error || "Failed to publish version"); return; }
+      setVersionSuccess(`Version ${newVersion} published!`);
+      update("version", newVersion);
+      setNewVersion("");
+      setChangelog("");
+      setTimeout(() => setShowVersionModal(false), 1500);
+    } catch {
+      setVersionError("Network error");
+    } finally {
+      setPublishingVersion(false);
+    }
+  };
+
   if (loading || status === "loading") {
     return <div className="flex min-h-[60vh] items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" /></div>;
   }
@@ -115,7 +149,7 @@ export default function EditSkillPage() {
       </div>
 
       {error && <div className="mb-4 rounded-lg border border-red-800 bg-red-900/30 px-4 py-3 text-sm text-red-400">{error}</div>}
-      {success && <div className="mb-4 rounded-lg border border-emerald-800 bg-emerald-900/30 px-4 py-3 text-sm text-emerald-400">✅ Changes saved successfully!</div>}
+      {success && <div className="mb-4 rounded-lg border border-emerald-800 bg-emerald-900/30 px-4 py-3 text-sm text-emerald-400">✅ Changes saved! Your skill has been sent for re-review.</div>}
 
       <div className="space-y-6">
         <div className="grid sm:grid-cols-2 gap-4">
@@ -135,9 +169,21 @@ export default function EditSkillPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Full Description (Markdown)</label>
-          <textarea value={form.longDescription} onChange={(e) => update("longDescription", e.target.value)}
-            rows={8} className={`${inputCls} resize-y`} />
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-sm font-medium text-gray-300">Full Description (Markdown)</label>
+            <button type="button" onClick={() => setShowMdPreview(!showMdPreview)}
+              className="text-xs text-gray-500 hover:text-gray-400 transition-colors">
+              {showMdPreview ? "✏️ Edit" : "👁 Preview"}
+            </button>
+          </div>
+          {showMdPreview ? (
+            <div className="rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 min-h-[200px] prose prose-invert prose-sm max-w-none text-gray-300 overflow-y-auto max-h-96">
+              {form.longDescription ? <ReactMarkdown>{form.longDescription}</ReactMarkdown> : <p className="text-gray-600 italic">No description yet</p>}
+            </div>
+          ) : (
+            <textarea value={form.longDescription} onChange={(e) => update("longDescription", e.target.value)}
+              rows={8} className={`${inputCls} resize-y`} />
+          )}
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4">
@@ -201,8 +247,49 @@ export default function EditSkillPage() {
             className="rounded-lg bg-emerald-600 px-8 py-3 font-medium text-white hover:bg-emerald-500 transition-colors disabled:opacity-50">
             {saving ? "Saving..." : "Save Changes"}
           </button>
+          <button onClick={() => setShowVersionModal(true)}
+            className="rounded-lg border border-emerald-600 px-6 py-3 text-sm font-medium text-emerald-400 hover:bg-emerald-600/10 transition-colors">
+            🚀 Publish New Version
+          </button>
           <button onClick={() => router.back()} className="text-sm text-gray-400 hover:text-gray-300">Cancel</button>
         </div>
+
+        {/* Version publish modal */}
+        {showVersionModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowVersionModal(false)}>
+            <div className="w-full max-w-md rounded-2xl border border-gray-700 bg-gray-900 p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+              <h2 className="text-xl font-bold">Publish New Version</h2>
+              <p className="text-sm text-gray-400">Current version: <span className="font-mono text-gray-300">v{form.version}</span></p>
+
+              {versionError && <div className="rounded-lg border border-red-800 bg-red-900/30 px-3 py-2 text-sm text-red-400">{versionError}</div>}
+              {versionSuccess && <div className="rounded-lg border border-emerald-800 bg-emerald-900/30 px-3 py-2 text-sm text-emerald-400">{versionSuccess}</div>}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">New Version (semver)</label>
+                <input value={newVersion} onChange={(e) => setNewVersion(e.target.value)}
+                  placeholder="e.g. 1.1.0" className={inputCls} />
+                <p className="text-xs text-gray-600 mt-1">Must be greater than {form.version}. Format: MAJOR.MINOR.PATCH</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Changelog</label>
+                <textarea value={changelog} onChange={(e) => setChangelog(e.target.value)}
+                  rows={4} placeholder="What changed in this version?" className={`${inputCls} resize-y`} />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button onClick={handlePublishVersion} disabled={publishingVersion}
+                  className="flex-1 rounded-lg bg-emerald-600 py-2.5 font-medium text-white hover:bg-emerald-500 transition-colors disabled:opacity-50">
+                  {publishingVersion ? "Publishing..." : "Publish Version"}
+                </button>
+                <button onClick={() => setShowVersionModal(false)}
+                  className="rounded-lg border border-gray-700 px-4 py-2.5 text-sm text-gray-400 hover:text-gray-300 transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

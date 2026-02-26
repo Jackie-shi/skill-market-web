@@ -95,6 +95,7 @@ model PublishedSkill {
 
   purchases Purchase[]
   reviews   Review[]
+  versions  SkillVersion[]
 
   // Cached rating
   averageRating Float @default(0)
@@ -114,6 +115,20 @@ model Review {
   skill   PublishedSkill @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
   @@unique([userId, skillId]) // one review per user per skill
+  @@index([skillId])
+}
+
+model SkillVersion {
+  id        String   @id @default(cuid())
+  version   String
+  changelog String?
+  files     String? // JSON: list of changed files or metadata
+  createdAt DateTime @default(now())
+
+  skillId String
+  skill   PublishedSkill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([skillId, version])
   @@index([skillId])
 }
 

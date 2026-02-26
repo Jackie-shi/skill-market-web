@@ -9,6 +9,8 @@ import PlatformBadge from "@/components/PlatformBadge";
 import PriceBadge from "@/components/PriceBadge";
 import InstallInstructions from "@/components/InstallInstructions";
 import CopyButton from "@/components/CopyButton";
+import VersionHistory from "@/components/VersionHistory";
+
 
 const ReviewSection = dynamic(() => import("@/components/ReviewSection"), {
   loading: () => <div className="text-gray-500 py-4">Loading reviews...</div>,
