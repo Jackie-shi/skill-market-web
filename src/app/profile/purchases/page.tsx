@@ -41,8 +41,17 @@ export default function PurchasesPage() {
       <h1 className="text-2xl font-bold">Purchase History</h1>
 
       {purchases.length === 0 ? (
-        <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-12 text-center">
-          <p className="text-gray-400">No purchases yet. Browse the marketplace to find skills.</p>
+        <div className="rounded-xl border border-dashed border-gray-700 bg-gray-900/30 p-12 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-purple-500/10 mb-4">
+            <span className="text-3xl">🛒</span>
+          </div>
+          <h3 className="text-lg font-semibold text-white mb-2">No purchases yet</h3>
+          <p className="text-gray-400 mb-6 max-w-md mx-auto">
+            Premium skills can save you hours of configuration. Browse the marketplace to find tools that supercharge your workflow.
+          </p>
+          <a href="/search?sort=rating" className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-6 py-3 font-medium text-white hover:bg-emerald-500 transition-colors">
+            🔍 Browse Top-Rated Skills
+          </a>
         </div>
       ) : (
         <div className="space-y-3">

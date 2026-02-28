@@ -3,6 +3,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Tooltip from "@/components/Tooltip";
 
 interface SkillStat {
   id: string;
@@ -114,20 +115,28 @@ export default function DashboardPage() {
       {overview && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-            <p className="text-xs text-gray-500 mb-1">Total Skills</p>
+            <Tooltip content="Skills submitted (pending + live + delisted)" position="bottom">
+              <p className="text-xs text-gray-500 mb-1 cursor-help">Total Skills ℹ️</p>
+            </Tooltip>
             <p className="text-2xl font-bold text-white">{overview.totalSkills}</p>
             <p className="text-xs text-gray-500 mt-1">{overview.liveSkills} live</p>
           </div>
           <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-            <p className="text-xs text-gray-500 mb-1">Total Downloads</p>
+            <Tooltip content="Free installs + paid purchases combined" position="bottom">
+              <p className="text-xs text-gray-500 mb-1 cursor-help">Total Downloads ℹ️</p>
+            </Tooltip>
             <p className="text-2xl font-bold text-emerald-400">{overview.totalDownloads.toLocaleString()}</p>
           </div>
           <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-            <p className="text-xs text-gray-500 mb-1">Total Revenue</p>
+            <Tooltip content="Your earnings after 15% platform fee" position="bottom">
+              <p className="text-xs text-gray-500 mb-1 cursor-help">Total Revenue ℹ️</p>
+            </Tooltip>
             <p className="text-2xl font-bold text-purple-400">${overview.totalEarnings.toFixed(2)}</p>
           </div>
           <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-            <p className="text-xs text-gray-500 mb-1">Total Sales</p>
+            <Tooltip content="Number of paid purchases across all your skills" position="bottom">
+              <p className="text-xs text-gray-500 mb-1 cursor-help">Total Sales ℹ️</p>
+            </Tooltip>
             <p className="text-2xl font-bold text-white">{overview.totalPurchases}</p>
           </div>
         </div>

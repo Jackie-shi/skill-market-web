@@ -132,10 +132,12 @@ export default function ProfilePage() {
           <Link href="/profile/skills" className="text-sm text-emerald-500 hover:text-emerald-400">View All →</Link>
         </div>
         {recentSkills.length === 0 ? (
-          <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-8 text-center">
-            <p className="text-gray-400 mb-3">You haven&apos;t published any skills yet.</p>
-            <Link href="/publish" className="inline-block rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-500">
-              Publish Your First Skill
+          <div className="rounded-xl border border-dashed border-gray-700 bg-gray-900/30 p-8 text-center">
+            <span className="text-3xl mb-3 block">🚀</span>
+            <p className="text-white font-semibold mb-1">Start creating</p>
+            <p className="text-gray-400 text-sm mb-4">Turn your AI workflows into shareable skills — it only takes 5 minutes.</p>
+            <Link href="/publish" className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium hover:bg-emerald-500 transition-colors">
+              ✨ Publish Your First Skill
             </Link>
           </div>
         ) : (
@@ -166,8 +168,9 @@ export default function ProfilePage() {
           <Link href="/profile/purchases" className="text-sm text-emerald-500 hover:text-emerald-400">View All →</Link>
         </div>
         {recentPurchases.length === 0 ? (
-          <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-8 text-center">
-            <p className="text-gray-400">No purchases yet.</p>
+          <div className="rounded-xl border border-dashed border-gray-700 bg-gray-900/30 p-8 text-center">
+            <span className="text-3xl mb-3 block">🛒</span>
+            <p className="text-gray-400 text-sm">No purchases yet. <Link href="/search" className="text-emerald-400 hover:text-emerald-300">Browse skills →</Link></p>
           </div>
         ) : (
           <div className="space-y-2">
