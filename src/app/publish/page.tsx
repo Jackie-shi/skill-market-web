@@ -4,6 +4,8 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { CATEGORIES } from "@/lib/categories";
 import ReactMarkdown from "react-markdown";
+import Confetti from "@/components/Confetti";
+import Tooltip from "@/components/Tooltip";
 
 const PLATFORMS = [
   { value: "openclaw", label: "OpenClaw" },
@@ -210,66 +212,120 @@ export default function PublishPage() {
     return <div className="flex min-h-[60vh] items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" /></div>;
   }
 
-  // Success screen with share/badge
+  // Success screen with confetti + share/badge
   if (submitted) {
-    const skillUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/skills/${submitted.name}`;
-    const badgeMarkdown = `[![Skill Market](${typeof window !== "undefined" ? window.location.origin : ""}/api/badge/${submitted.name})](${skillUrl})`;
-    const badgeHtml = `<a href="${skillUrl}"><img src="${typeof window !== "undefined" ? window.location.origin : ""}/api/badge/${submitted.name}" alt="${submitted.displayName} on Skill Market" /></a>`;
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const skillUrl = `${origin}/skills/${submitted.name}`;
+    const badgeMarkdown = `[![Skill Market](${origin}/api/badge/${submitted.name})](${skillUrl})`;
+    const badgeHtml = `<a href="${skillUrl}"><img src="${origin}/api/badge/${submitted.name}" alt="${submitted.displayName} on Skill Market" /></a>`;
+    const tweetText = encodeURIComponent(`Just published "${submitted.displayName}" on Skill Market! 🚀\n\n${skillUrl}`);
+    const linkedInUrl = encodeURIComponent(skillUrl);
 
     return (
-      <div className="mx-auto max-w-2xl px-4 py-24 text-center">
-        <p className="text-5xl mb-4">🎉</p>
-        <h1 className="text-3xl font-bold mb-3">Skill Submitted!</h1>
-        <p className="text-gray-400 mb-8">
-          Your skill is in the review queue. We&apos;ll notify you once it&apos;s approved and listed.
-        </p>
+      <>
+        <Confetti duration={4000} />
+        <div className="mx-auto max-w-2xl px-4 py-16 text-center">
+          {/* Celebration header */}
+          <div className="mb-8">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500/20 border-2 border-emerald-500/40 mb-4 animate-bounce">
+              <span className="text-4xl">🎉</span>
+            </div>
+            <h1 className="text-3xl font-bold mb-2">
+              <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+                Congratulations!
+              </span>
+            </h1>
+            <p className="text-xl text-white font-semibold mb-2">&ldquo;{submitted.displayName}&rdquo; is submitted!</p>
+            <p className="text-gray-400">
+              Your skill is in the review queue. We&apos;ll notify you once it&apos;s approved — usually within 24 hours.
+            </p>
+          </div>
 
-        {/* Share Section */}
-        <div className="text-left space-y-6 mb-8">
-          <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 space-y-3">
-            <h3 className="font-semibold text-sm text-gray-300">📎 Share Link (available after approval)</h3>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 text-xs bg-gray-800 px-3 py-2 rounded text-emerald-400 overflow-x-auto">{skillUrl}</code>
-              <button onClick={() => navigator.clipboard.writeText(skillUrl)}
-                className="shrink-0 text-xs bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded text-gray-300 transition-colors">
-                Copy
-              </button>
+          {/* What happens next */}
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-950/20 p-6 mb-8">
+            <h3 className="font-semibold text-sm text-emerald-400 mb-3">⏭️ What happens next?</h3>
+            <div className="grid sm:grid-cols-3 gap-4 text-sm">
+              <div className="flex flex-col items-center gap-2">
+                <span className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-xs">1</span>
+                <span className="text-gray-300">Review (24h)</span>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <span className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-xs">2</span>
+                <span className="text-gray-300">Goes live</span>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <span className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-xs">3</span>
+                <span className="text-gray-300">Start earning</span>
+              </div>
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 space-y-3">
-            <h3 className="font-semibold text-sm text-gray-300">🏷️ Embed Badge (Markdown)</h3>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 text-xs bg-gray-800 px-3 py-2 rounded text-gray-400 overflow-x-auto">{badgeMarkdown}</code>
-              <button onClick={() => navigator.clipboard.writeText(badgeMarkdown)}
-                className="shrink-0 text-xs bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded text-gray-300 transition-colors">
-                Copy
-              </button>
+          {/* Social share */}
+          <div className="mb-8">
+            <p className="text-sm text-gray-500 mb-3">Share your achievement</p>
+            <div className="flex justify-center gap-3">
+              <a
+                href={`https://twitter.com/intent/tweet?text=${tweetText}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg bg-[#1DA1F2]/10 border border-[#1DA1F2]/30 px-4 py-2.5 text-sm text-[#1DA1F2] hover:bg-[#1DA1F2]/20 transition-colors"
+              >
+                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+                Share on X
+              </a>
+              <a
+                href={`https://www.linkedin.com/sharing/share-offsite/?url=${linkedInUrl}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg bg-[#0A66C2]/10 border border-[#0A66C2]/30 px-4 py-2.5 text-sm text-[#0A66C2] hover:bg-[#0A66C2]/20 transition-colors"
+              >
+                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" /></svg>
+                LinkedIn
+              </a>
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 space-y-3">
-            <h3 className="font-semibold text-sm text-gray-300">🏷️ Embed Badge (HTML)</h3>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 text-xs bg-gray-800 px-3 py-2 rounded text-gray-400 overflow-x-auto">{badgeHtml}</code>
-              <button onClick={() => navigator.clipboard.writeText(badgeHtml)}
-                className="shrink-0 text-xs bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded text-gray-300 transition-colors">
-                Copy
-              </button>
+          {/* Share links + badges */}
+          <div className="text-left space-y-4 mb-8">
+            <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-sm text-gray-300">📎 Share Link</h3>
+                <Tooltip content="Link goes live after approval" position="top">
+                  <span className="text-xs text-gray-600 cursor-help">ℹ️</span>
+                </Tooltip>
+              </div>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-xs bg-gray-800 px-3 py-2 rounded text-emerald-400 overflow-x-auto">{skillUrl}</code>
+                <button onClick={() => navigator.clipboard.writeText(skillUrl)}
+                  className="shrink-0 text-xs bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded text-gray-300 transition-colors">
+                  Copy
+                </button>
+              </div>
             </div>
+
+            <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4 space-y-2">
+              <h3 className="font-semibold text-sm text-gray-300">🏷️ README Badge (Markdown)</h3>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-xs bg-gray-800 px-3 py-2 rounded text-gray-400 overflow-x-auto">{badgeMarkdown}</code>
+                <button onClick={() => navigator.clipboard.writeText(badgeMarkdown)}
+                  className="shrink-0 text-xs bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded text-gray-300 transition-colors">
+                  Copy
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-4 justify-center">
+            <button onClick={() => router.push("/profile/skills")} className="rounded-lg bg-emerald-600 px-6 py-3 font-medium hover:bg-emerald-500 transition-colors">
+              View My Skills →
+            </button>
+            <button onClick={() => { setSubmitted(null); setStep(1); setForm({ name: "", displayName: "", version: "1.0.0", description: "", longDescription: "", category: "", keywords: "", platforms: [], osTargets: [], pricingModel: "free", price: "", license: "MIT", repository: "" }); }}
+              className="text-emerald-400 hover:text-emerald-300 transition-colors px-6 py-3">
+              Publish Another
+            </button>
           </div>
         </div>
-
-        <div className="flex gap-4 justify-center">
-          <button onClick={() => router.push("/profile/skills")} className="rounded-lg bg-emerald-600 px-6 py-3 font-medium hover:bg-emerald-500 transition-colors">
-            View My Skills
-          </button>
-          <button onClick={() => { setSubmitted(null); setStep(1); setForm({ name: "", displayName: "", version: "1.0.0", description: "", longDescription: "", category: "", keywords: "", platforms: [], osTargets: [], pricingModel: "free", price: "", license: "MIT", repository: "" }); }}
-            className="text-emerald-400 hover:text-emerald-300 transition-colors px-6 py-3">
-            Submit Another
-          </button>
-        </div>
-      </div>
+      </>
     );
   }
 
@@ -330,7 +386,12 @@ export default function PublishPage() {
                 {fieldError("displayName")}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Skill Slug *</label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Skill Slug *{" "}
+                  <Tooltip content="This becomes your skill's URL: skillmarket.io/skills/your-slug" position="right">
+                    <span className="text-gray-600 cursor-help">ℹ️</span>
+                  </Tooltip>
+                </label>
                 <input value={form.name} onChange={(e) => update("name", e.target.value)}
                   placeholder="my-awesome-skill" maxLength={50} className={inputCls("name")} />
                 <p className="text-xs text-gray-500 mt-1">Lowercase, hyphens only. Auto-generated from display name.</p>
@@ -351,7 +412,12 @@ export default function PublishPage() {
                 {fieldError("description")}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Full Description (Markdown)</label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Full Description (Markdown){" "}
+                  <Tooltip content="Use Markdown for rich formatting: headings, code blocks, lists. This is what users see on your skill page." position="right">
+                    <span className="text-gray-600 cursor-help">ℹ️</span>
+                  </Tooltip>
+                </label>
                 <textarea value={form.longDescription} onChange={(e) => update("longDescription", e.target.value)}
                   rows={6} placeholder="Detailed description with features, usage examples... Markdown supported."
                   maxLength={5000} className={`${inputCls("longDescription")} resize-y`} />

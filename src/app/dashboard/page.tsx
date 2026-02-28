@@ -135,15 +135,42 @@ export default function DashboardPage() {
 
       {/* Skills Table */}
       {skills.length === 0 ? (
-        <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-12 text-center">
-          <p className="text-4xl mb-3">🚀</p>
-          <p className="text-gray-400 mb-4">You haven&apos;t published any skills yet.</p>
-          <Link
-            href="/publish"
-            className="inline-block rounded-lg bg-emerald-600 px-6 py-3 font-medium hover:bg-emerald-500"
-          >
-            Publish Your First Skill
-          </Link>
+        <div className="rounded-xl border border-dashed border-gray-700 bg-gray-900/30 p-12 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-500/10 mb-4">
+            <span className="text-3xl">🚀</span>
+          </div>
+          <h3 className="text-lg font-semibold text-white mb-2">Start your creator journey</h3>
+          <p className="text-gray-400 mb-6 max-w-md mx-auto">
+            Publish your first AI skill and start building your creator profile. It only takes 5 minutes.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
+            <Link
+              href="/publish"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-6 py-3 font-medium hover:bg-emerald-500 transition-colors"
+            >
+              ✨ Publish Your First Skill
+            </Link>
+            <Link
+              href="/search"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-700 px-6 py-3 text-sm text-gray-300 hover:border-gray-500 hover:text-white transition-all"
+            >
+              Browse for inspiration →
+            </Link>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-4 max-w-lg mx-auto text-sm">
+            <div className="text-center">
+              <p className="text-emerald-400 font-bold text-lg">5 min</p>
+              <p className="text-gray-500">to publish</p>
+            </div>
+            <div className="text-center">
+              <p className="text-emerald-400 font-bold text-lg">0%</p>
+              <p className="text-gray-500">fee for 6 months</p>
+            </div>
+            <div className="text-center">
+              <p className="text-emerald-400 font-bold text-lg">Free</p>
+              <p className="text-gray-500">to list</p>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">

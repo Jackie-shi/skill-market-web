@@ -6,7 +6,8 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
-  const skill = await prisma.publishedSkill.findFirst({
+  try {
+    const skill = await prisma.publishedSkill.findFirst({
     where: { name: params.slug, status: "approved" },
     include: {
       author: { select: { id: true, name: true, image: true, bio: true, githubUrl: true, websiteUrl: true } },
@@ -34,4 +35,11 @@ export async function GET(
     { skill, relatedSkills, authorSkillCount },
     { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300" } }
   );
+  } catch (error) {
+    console.error("[API /api/skills/[slug]] Database error:", error);
+    return NextResponse.json(
+      { error: "Database connection failed" },
+      { status: 503 }
+    );
+  }
 }
